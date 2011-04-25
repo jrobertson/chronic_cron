@@ -23,9 +23,9 @@ class ChronicCron
     day.to_i <= last_day.day
   end  
   
-  def self.parse(object)
+  def self.parse(s)
     
-    raw_a = object.is_a?(String) ? object.split : object
+    raw_a = s.split
     raw_a << '*' if raw_a.length <= 5 # add the year?
 
     units = Time.now.to_a.values_at(1..4) + [nil, Time.now.year]
@@ -40,7 +40,7 @@ class ChronicCron
          Time.parse("%s-%s-%s %s:%s" % date.reverse)},
       year: lambda{|x, interval| 
          date = x.to_a.values_at(1..5)
-         interval.times { date[4].succ! }
+         interfval.times { date[4].succ! }
          Time.parse("%s-%s-%s %s:%s" % date.reverse)}
     }
 
