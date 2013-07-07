@@ -5,6 +5,10 @@
 require 'date'
 require 'time'
 
+MINUTE = 60
+HOUR = MINUTE * 60
+DAY = HOUR * 24
+
 class Array
 
   def inflate()
@@ -23,17 +27,17 @@ class ChronicCron
     day.to_i <= last_day.day
   end  
   
-  def self.parse(object)
+  def self.parse(object, now=Time.now)
     
     raw_a = object.is_a?(String) ? object.split : object
     raw_a << '*' if raw_a.length <= 5 # add the year?
 
-    units = Time.now.to_a.values_at(1..4) + [nil, Time.now.year]
+    units = now.to_a.values_at(1..4) + [nil, now.year]
       
     procs = {
-      min: lambda{|x, interval| x += (interval * 60).to_i},
-      hour: lambda{|x, interval| x += (interval * 60 * 60).to_i},
-      day: lambda{|x, interval| x += (interval * 60 * 60 * 24).to_i}, 
+      min: lambda{|x, interval| x += (interval * MINUTE).to_i},
+      hour: lambda{|x, interval| x += (interval * HOUR).to_i},
+      day: lambda{|x, interval| x += (interval * DAY).to_i}, 
       month: lambda{|x, interval| 
          date = x.to_a.values_at(1..5)
          interval.times { date[3].succ! }
@@ -68,10 +72,10 @@ class ChronicCron
     end
 
     raw_date = raw_units.map.with_index {|x,i| dt[i].call(x) }
-
+    
     # expand the repeater
 
-    ceil = {min: 60, hour: 23, day: 31, month: 12}.values
+    ceil = {min: MINUTE, hour: 23, day: 31, month: 12}.values
 
     if repeaters.any? then
       repeaters.each_with_index do |x,i|
@@ -86,7 +90,7 @@ class ChronicCron
     end  
    
     dates = raw_date.inflate
-
+    
     a = dates.map do |date|
       d = date.map{|x| x ? x.clone : nil}
       wday, year = d.pop(2)
@@ -95,22 +99,22 @@ class ChronicCron
       next unless day_valid? d.reverse.take 3
       t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
         
-      if t < Time.now and wday and wday != t.wday then
-        d[2], d[3] = Time.now.to_a.values_at(3,4).map(&:to_s)
+      if t < now and wday and wday != t.wday then
+        d[2], d[3] = now.to_a.values_at(3,4).map(&:to_s)
         t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
-        t += (60 * 60 * 24) until t.wday == wday.to_i
+        t += DAY until t.wday == wday.to_i
       end
 
       i = 3
-      while t < Time.now and i >= 0 and raw_a[i][/\*/]
-        d[i] = Time.now.to_a[i+1].to_s
+      while t < now and i >= 0 and raw_a[i][/\*/]
+        d[i] = now.to_a[i+1].to_s
         t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
         i -= 1
       end
 
-      if t < Time.now then
+      if t < now then
 
-        if t.month < Time.now.month and raw_a[4] == '*' then
+        if t.month < now.month and raw_a[4] == '*' then
           # increment the year
           d[4].succ!
           t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
@@ -119,7 +123,7 @@ class ChronicCron
             d[4].succ!
             t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
           end
-        elsif t.day < Time.now.day and raw_a[3] == '*' then
+        elsif t.day < now.day and raw_a[3] == '*' then
           # increment the month
           if d[3].to_i <= 11 then
             d[3].succ!
@@ -128,25 +132,25 @@ class ChronicCron
             d[4].succ!
           end
           t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
-        elsif  t.hour < Time.now.hour and raw_a[2] == '*' then
+        elsif  t.hour < now.hour and raw_a[2] == '*' then
           # increment the day
-          t += 60 * 60 * 24 * ((Time.now.day - d[2].to_i) + 1)
-        elsif t.min < Time.now.min and raw_a[1] == '*' then
+          t += DAY * ((now.day - d[2].to_i) + 1)
+        elsif t.min < now.min and raw_a[1] == '*' then
           # increment the hour
-          t += 60 * 60 * ((Time.now.hour - d[1].to_i) + 1)
+          t += HOUR * ((now.hour - d[1].to_i) + 1)
         elsif raw_a[0] == '*' then
           # increment the minute
-          t += 60 * ((Time.now.min - d[0].to_i) + 1)
+          t += MINUTE * ((now.min - d[0].to_i) + 1)
           t = procs.values[i].call(t, repeaters[i].to_i) if repeaters[i]
         end   
 
       end
 
       if wday then
-        t += (60 * 60 * 24) until t.wday == wday.to_i
+        t += DAY until t.wday == wday.to_i
       end
       
-      if t <= Time.now and repeaters.any? then
+      if t <= now and repeaters.any? then
 
         repeaters.each_with_index do |x,i|
           if x then
