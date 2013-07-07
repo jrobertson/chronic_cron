@@ -45,6 +45,14 @@ class ChronicCron
       "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
     end
 
+    get('hourly')   {'0 * * * *'}    
+    get('daily')    {'0 0 * * *'}
+    get('midnight') {'0 0 * * *'}
+    get('weekly')   {'0 0 * * 0'}
+    get('monthly')  {'0 0 1 * *'}
+    get('yearly')   {'0 0 1 1 *'}
+    get('annually') {'0 0 1 1 *'}
+    
   end
   
   alias find_expression run_route
