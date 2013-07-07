@@ -32,12 +32,12 @@ class ChronicCron
   def expressions(params) 
 
     get /10:15am every day/ do 
-      '0 15 10 * *'
+      '15 10 * * *'
     end
 
     # e.g. 10:15am every day
     get /(\d{1,2}):(\d{1,2})am every day/ do |hrs, mins|
-      "0 %s %s * *" % [mins, hrs]
+      "%s %s * * *" % [mins, hrs]
     end
 
     # e.g. at 11:00 and 16:00 on every day

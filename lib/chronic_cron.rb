@@ -41,8 +41,8 @@ class ChronicCron
     end
 
     # e.g. at 11:00 and 16:00 on every day
-    get /(\d{1,2}):(\d{1,2}) and (\d{1,2}):(\d{1,2}) on every day/ do
-      "00 %s,%s * * *" % params.captures
+    get /(\d{1,2}):(\d{1,2}) and (\d{1,2}):\d{1,2} on every day/ do
+      "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
     end
 
   end
