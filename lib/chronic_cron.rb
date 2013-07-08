@@ -20,7 +20,7 @@ class ChronicCron
     @to_expression = find_expression s
     
     if @to_expression.nil? then
-      t = Chronic.parse('tomorrow')
+      t = Chronic.parse(s)
       @to_expression = "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
     end
     
@@ -65,6 +65,18 @@ class ChronicCron
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
       "%s %s * * %s" % [mins, hrs , wday]
     end
+    
+    # e.g. every 10 minutes
+    get(/every (\d{1,2}) min(?:ute)?s?/){|mins| "*/%s * * * *" % [mins]}
+    get(/every min(?:ute)?/){"* * * * *"}
+    
+    # e.g. every 2 hours
+    get(/every (\d{1,2}) h(?:ou)?rs?/){|hrs| "* */%s * * *" % [hrs]}
+    get(/every hour/){ "0 * * * *"}
+    
+    # e.g. every 2 days
+    get(/every (\d{1,2}) days?/){|days| "* * */%s * *" % [days]}    
+    get(/every day/){ "0 0 * * *"}
 
   end
   
