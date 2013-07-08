@@ -3,6 +3,7 @@
 # file: chronic_cron.rb
 
 require 'app-routes'
+require 'chronic'
 require 'cron_format'
 
 
