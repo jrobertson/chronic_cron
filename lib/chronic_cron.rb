@@ -3,17 +3,14 @@
 # file: chronic_cron.rb
 
 require 'app-routes'
+require 'chronic'
 require 'cron_format'
 
 
 class ChronicCron
   include AppRoutes
   
-  attr_reader :to_expression
-  
-  def self.parse(s, now=Time.now)    
-    CronFormat.new(s, now).to_time
-  end
+  attr_reader :to_expression  
   
   def initialize(s, now=Time.now)
     @now = now
@@ -21,6 +18,12 @@ class ChronicCron
     @params = {}
     expressions(@params)
     @to_expression = find_expression s
+    
+    if @to_expression.nil? then
+      t = Chronic.parse('tomorrow')
+      @to_expression = "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+    end
+    
     @cf = CronFormat.new(@to_expression, now)    
   end
   
@@ -31,8 +34,10 @@ class ChronicCron
 
   def expressions(params) 
 
-    get /10:15am every day/ do 
-      '15 10 * * *'
+    r = '[0-9\*,\?\/\-]+'
+    # e.g. 00 5 15 * *
+    get /(#{r}\s+#{r}\s+#{r}\s#{r}\s#{r})(\s#{r})?/ do
+      "%s%s" % params[:captures]
     end
 
     # e.g. 10:15am every day
