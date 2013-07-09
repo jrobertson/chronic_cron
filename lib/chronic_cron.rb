@@ -17,7 +17,7 @@ class ChronicCron
     super()
     @params = {}
     expressions(@params)
-    @to_expression = find_expression s
+    @to_expression = find_expression s.sub(/^(?:on|at)\s+/,'')
     
     if @to_expression.nil? then
       t = Chronic.parse(s)
