@@ -5,6 +5,7 @@
 require 'app-routes'
 require 'chronic'
 require 'cron_format'
+require 'timetoday'
 
 
 class ChronicCron
@@ -77,6 +78,18 @@ class ChronicCron
     # e.g. every 2 days
     get(/every (\d{1,2}) days?/){|days| "* * */%s * *" % [days]}    
     get(/every day/){ "0 0 * * *"}
+    
+    get /any\s?time today/ do
+      self.instance_eval %q(
+      def next()
+        t = TimeToday.any + DAY
+        @cf = CronFormat.new("%s %s %s %s *" % (t)
+            .to_a.values_at(1,2,3,4))
+        t
+      end
+      )
+      "%s %s %s %s *" % TimeToday.future.to_a.values_at(1,2,3,4)
+    end
 
   end
   
