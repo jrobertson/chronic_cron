@@ -18,7 +18,8 @@ class ChronicCron
     super()
     @params = {}
     expressions(@params)
-    @to_expression = find_expression s.sub(/^(?:on|at)\s+/,'')
+
+    @to_expression = find_expression s.sub!(/^(?:on|at)\s+/,'')
     
     if @to_expression.nil? then
       t = Chronic.parse(s)
@@ -83,12 +84,11 @@ class ChronicCron
       self.instance_eval %q(
       def next()
         t = TimeToday.any + DAY
-        @cf = CronFormat.new("%s %s %s %s *" % (t)
-            .to_a.values_at(1,2,3,4))
+        @cf = CronFormat.new("%s %s %s %s *" % t.to_a[1..4])
         t
       end
       )
-      "%s %s %s %s *" % TimeToday.future.to_a.values_at(1,2,3,4)
+      "%s %s %s %s *" % TimeToday.future.to_a[1..4]
     end
 
   end

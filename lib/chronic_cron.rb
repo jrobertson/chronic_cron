@@ -19,14 +19,15 @@ class ChronicCron
     @params = {}
     expressions(@params)
 
-    @to_expression = find_expression s.sub!(/^(?:on|at)\s+/,'')
-    
+    @to_expression = find_expression(s.sub(/^(?:on|at)\s+/,''))
+
     if @to_expression.nil? then
       t = Chronic.parse(s)
       @to_expression = "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
     end
     
     @cf = CronFormat.new(@to_expression, now)    
+
   end
   
   def next()    @cf.next    end
@@ -90,7 +91,6 @@ class ChronicCron
       )
       "%s %s %s %s *" % TimeToday.future.to_a[1..4]
     end
-
   end
   
   alias find_expression run_route
