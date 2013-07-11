@@ -44,11 +44,18 @@ class ChronicCron
     end
 
     # e.g. 10:15am every day
-    get /(\d{1,2}):(\d{1,2})([ap]m)? every day/ do |raw_hrs, mins, meridiem|
+    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+every day/ do |raw_hrs, mins, meridiem|
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
       "%s %s * * *" % [mins, hrs]
     end
 
+    # e.g. at 7:30am  Monday to Friday
+    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
+                                  |raw_hrs, mins, meridiem, wday1, wday2|
+      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      "%s %s * * %s-%s" % [mins, hrs , wday1, wday2]
+    end      
+    
     # e.g. at 11:00 and 16:00 on every day
     get /(\d{1,2}):(\d{1,2}) and (\d{1,2}):\d{1,2} (?:on )?every day/ do
       "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
@@ -63,7 +70,7 @@ class ChronicCron
     get('annually') {'0 0 1 1 *'}
     
     # e.g. at 10:30pm on every Monday
-    get /(\d{1,2}):(\d{1,2})([ap]m)? (?:on )?every (\w+)/ do 
+    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(?:on )?every (\w+)/ do 
                                               |raw_hrs, mins, meridiem, wday|
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
       "%s %s * * %s" % [mins, hrs , wday]
@@ -91,6 +98,7 @@ class ChronicCron
       )
       "%s %s %s %s *" % TimeToday.future.to_a[1..4]
     end
+      
   end
   
   alias find_expression run_route
