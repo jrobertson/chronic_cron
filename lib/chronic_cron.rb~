@@ -19,7 +19,7 @@ class ChronicCron
     @params = {}
     expressions(@params)
 
-    @to_expression = find_expression(s.sub(/^(?:on|at)/,''))
+    @to_expression = find_expression(s.sub(/^(?:on|at)\s+/,''))
 
     if @to_expression.nil? then
       t = Chronic.parse(s)
@@ -43,6 +43,11 @@ class ChronicCron
       "%s%s" % params[:captures]
     end
 
+    # e.g. 9:00-18:00 every day
+    get /(\d{1,2}):(\d{1,2})-(\d{1,2}):\d{1,2}\s+every day/ do
+      "%s %s-%s * * *" % params[:captures].values_at(1,0,2)
+    end    
+    
     # e.g. 10:15am every day
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+every day/ do |raw_hrs, mins, meridiem|
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
@@ -61,6 +66,7 @@ class ChronicCron
       "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
     end
 
+    
     get('hourly')   {'0 * * * *'}    
     get('daily')    {'0 0 * * *'}
     get('midnight') {'0 0 * * *'}
