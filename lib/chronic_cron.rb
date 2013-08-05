@@ -98,13 +98,13 @@ class ChronicCron
     
     # e.g. at 10:30pm on every Monday
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(?:on )?every (\w+)/ do 
-                                              |raw_hrs, mins, meridiem, wday|
+                                              |raw_hrs, mins, meridiem, wday|                                              
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
       "%s %s * * %s" % [mins, hrs , wday]
     end
     
     # e.g. at 10pm on every Monday
-    get /(\d{1,2})([ap]m)?\s+(?:on )?every (\w+)/ do 
+    get /(\d{1,2})([ap]m)?\s+(?:on )?every ((?:mon|tue|wed|thu|fri|sat|sun)\w*)/i do 
                                               |raw_hrs, meridiem, wday|
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
       "0 %s * * %s" % [hrs , wday]
@@ -147,7 +147,16 @@ class ChronicCron
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
+
+    get /(.*) every (\d) weeks/ do |raw_date, interval|
+
+      t = Chronic.parse(raw_date)
+      mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
+      "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
+    end        
+    
     get '*' do
+      
       t = Chronic.parse(params[:input])
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
     end    
