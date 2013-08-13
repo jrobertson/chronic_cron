@@ -53,16 +53,16 @@ class ChronicCron
     end    
 
     # e.g. every 30mins from 8:00am until 8:00pm mon-fri
-    get /every\s+(\d+)mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+(\w+\-\w+)/ do 
+    get /every\s+(\d+)\s*mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+(\w+\-\w+)/ do 
          |interval_mins, r_hrs1, mins1, meridiem1, r_hrs2, meridiem2, wdays|
-         puts 'cute'
+
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
       "%s/%s %s-%s * * %s" % [mins1.to_i, interval_mins, hrs1, hrs2, wdays]
     end        
     
     # e.g. every 30mins from 8:00am until 8:00pm every day
-    get /every\s+(\d+)mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+#{daily}/ do 
+    get /every\s+(\d+)\s*mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+#{daily}/ do 
                   |interval_mins, r_hrs1, mins1, meridiem1, r_hrs2, meridiem2|
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
@@ -80,7 +80,6 @@ class ChronicCron
     # e.g. 10:15am every day
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
-      puts 'book'
       "%s %s * * *" % [mins.to_i, hrs]
     end
 
@@ -111,7 +110,6 @@ class ChronicCron
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, mins, meridiem, wday|                                              
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
-      puts 'hmmm'
       "%s %s * * %s" % [mins, hrs , wday]
     end
     
@@ -156,7 +154,6 @@ class ChronicCron
     get /every\s+#{weekday}\s+at\s+(\d{1,2}):(\d{1,2})([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
       hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
-      puts 'coo'
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
