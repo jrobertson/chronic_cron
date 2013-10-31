@@ -8,6 +8,8 @@ require 'cron_format'
 require 'timetoday'
 
 
+WEEK = DAY * 7
+
 class ChronicCron
   include AppRoutes
   
@@ -22,6 +24,7 @@ class ChronicCron
     expressions(@params)
 
     expression = find_expression(s.sub(/^(?:on|at|from|starting)\s+/,''))
+
     @cf = CronFormat.new(expression, now)    
     @to_expression = @cf.to_expression
 
@@ -160,7 +163,7 @@ class ChronicCron
     # e.g. starting 05-Aug@15:03 every 2 weeks
     get /(.*) every (\d) weeks/ do |raw_date, interval|
 
-      t = Chronic.parse(raw_date)
+      t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
     end        
@@ -168,7 +171,7 @@ class ChronicCron
     # e.g. from 05-Aug@12:34 fortnightly
     get /(.*)\s+(?:biweekly|fortnightly)/ do |raw_date|
 
-      t = Chronic.parse(raw_date)
+      t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s/2 %s" % [mins, hrs, day, month, t.wday, year]
     end            
@@ -176,15 +179,47 @@ class ChronicCron
     # e.g. from 06-Aug@1pm every week
     get /(.*)\s+(?:weekly|every week)/ do |raw_date|
 
-      t = Chronic.parse(raw_date)
+      t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s %s" % [mins, hrs, day, month, t.wday, year]
     end            
     
+    # e.g. first thursday of each month at 7:30pm
+    nday = '(\w+(?:st|rd|nd))\s+' + weekday + '\s+'
+    get /#{nday}(?:of\s+)?(?:the|each|every)\s+month(?:\s+at\s+([^\s]+))?/ do
+                                                  |nth_week, day_of_week, time|
+
+      month = @now.month
+
+      h = {
+            /first|1st/       => 0, 
+            /second|2nd/      => 1, 
+            /third|3rd/       => 2, 
+            /fourth|4th|last/ => 3
+      }
+
+      _, nweek = h.find{|k,_| nth_week[k]}
+
+      def make_date(day_of_week, month, time, nweek)
+
+        Chronic.parse([day_of_week,month,time].join(' '), :now => @now) \
+          + WEEK * nweek
+      end
+
+      months = %w(jan feb mar apr may jun jul aug sep oct nov dec)
+      t = make_date day_of_week, months[month-1], time, nweek
+
+      if t < Time.now
+        t = make_date(day_of_week, months.rotate[month-1], time, nweek)
+      end
+
+      "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+    end 
+
     # e.g. 04-Aug@12:34
     get '*' do
       
-      t = Chronic.parse(params[:input])
+      t = Chronic.parse(params[:input], :now => @now)
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
     end    
   end
