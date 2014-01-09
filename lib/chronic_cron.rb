@@ -160,13 +160,64 @@ class ChronicCron
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
+    
+
+    # e.g. every 2nd week at 6am starting from 7th Jan
+    get /every (\w+) week\s+(?:at\s+(\w+)\s+starting\s+)?(?:from\s+)?(.*)/ do
+                                               |nth_week, raw_time, raw_date|
+
+#   |nth_week, day_of_week, time|
+
+
+
+      h = {
+            /first|1st/       => 0, 
+            /second|2nd/      => 1, 
+            /third|3rd/       => 2, 
+            /fourth|4th|last/ => 3
+      }
+
+      _, nweek = h.find{|k,_| nth_week[k]}
+
+      month = @now.month
+      date = Time.local(@now.year, month, 1)
+      t = Chronic.parse(raw_date + ' ' + raw_time, :now => date)
+
+      def make_date(day_of_week, month, time, nweek)
+
+        Chronic.parse([day_of_week,month,time].join(' '), :now => @now) \
+          + WEEK * nweek
+      end
+
+      if t < @now
+        day_of_week = Date::DAYNAMES[t.wday]
+        months = Date::MONTHNAMES
+        t = make_date(day_of_week, months.rotate[month], raw_time, nweek)
+      end
+
+      "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+
+    end        
+
+    # e.g.  every 2 weeks at 6am starting from 7th Jan
+     get /every (\w+) weeks\s+(?:at\s+(\w+)\s+starting\s+)?(?:from\s+)?(.*)/ do
+                                               |interval, raw_time, raw_date|
+
+      t = Chronic.parse(raw_date + ' ' + raw_time, :now => @now)
+      t += WEEK * interval.to_i until t > @now
+      mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
+
+      "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
+    end    
+
+
     # e.g. starting 05-Aug@15:03 every 2 weeks
     get /(.*) every (\d) weeks/ do |raw_date, interval|
 
       t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
-    end        
+    end    
     
     # e.g. from 05-Aug@12:34 fortnightly
     get /(.*)\s+(?:biweekly|fortnightly)/ do |raw_date|
@@ -205,12 +256,12 @@ class ChronicCron
         Chronic.parse([day_of_week,month,time].join(' '), :now => @now) \
           + WEEK * nweek
       end
+      
+      months = Date::MONTHNAMES
+      t = make_date day_of_week, months[month], time, nweek
 
-      months = %w(jan feb mar apr may jun jul aug sep oct nov dec)
-      t = make_date day_of_week, months[month-1], time, nweek
-
-      if t < Time.now
-        t = make_date(day_of_week, months.rotate[month-1], time, nweek)
+      if t < @now
+        t = make_date(day_of_week, months.rotate[month], time, nweek)
       end
 
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
