@@ -82,14 +82,14 @@ class ChronicCron
 
     # e.g. 10:15am every day
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * *" % [mins.to_i, hrs]
     end
 
     # e.g. at 7:30am  Monday to Friday
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
                                   |raw_hrs, mins, meridiem, wday1, wday2|
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s-%s" % [mins.to_i, hrs , wday1, wday2]
     end      
     
@@ -112,14 +112,14 @@ class ChronicCron
     # e.g. at 10:30pm on every Monday
     get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, mins, meridiem, wday|                                              
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s" % [mins, hrs , wday]
     end
     
     # e.g. at 10pm on every Monday
     get /(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, meridiem, wday|
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "0 %s * * %s" % [hrs , wday]
     end    
     
@@ -149,14 +149,14 @@ class ChronicCron
     # e.g. every tuesday at 4pm
     get /every\s+#{weekday}\s+at\s+(\d{1,2})([ap]m)/i do
                                               |wday, raw_hrs, meridiem, |
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "0 %s * * %s" % [hrs , wday]
     end
 
     # e.g. every tuesday at 4:40pm
     get /every\s+#{weekday}\s+at\s+(\d{1,2}):(\d{1,2})([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
@@ -186,7 +186,7 @@ class ChronicCron
     
     # e.g. first thursday of each month at 7:30pm
     nday = '(\w+(?:st|rd|nd))\s+' + weekday + '\s+'
-    get /#{nday}(?:of\s+)?(?:the|each|every)\s+month(?:\s+at\s+([^\s]+))?/ do
+    get /#{nday}(?:of\s+)?(?:the|each|every)\s+month(?:\s+at\s+([^\s]+))?/i do
                                                   |nth_week, day_of_week, time|
 
       month = @now.month
@@ -221,6 +221,15 @@ class ChronicCron
       
       t = Chronic.parse(params[:input], :now => @now)
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+    end
+
+    def in24hrs(raw_hrs, meridiem)
+
+      hrs = if meridiem == 'pm' then
+        raw_hrs.to_i + 12
+      else
+        raw_hrs.to_i == 12 ? 0 : raw_hrs
+      end
     end    
   end
   
