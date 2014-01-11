@@ -81,20 +81,20 @@ class ChronicCron
     end    
 
     # e.g. 10:15am every day
-    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
+    get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
       hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * *" % [mins.to_i, hrs]
     end
 
     # e.g. at 7:30am  Monday to Friday
-    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
+    get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
                                   |raw_hrs, mins, meridiem, wday1, wday2|
       hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s-%s" % [mins.to_i, hrs , wday1, wday2]
     end      
     
     # e.g. at 11:00 and 16:00 on every day
-    get /(\d{1,2}):(\d{1,2}) and (\d{1,2}):\d{1,2} (?:on )?#{daily}/ do
+    get /(\d{1,2}):?(\d{1,2}) and (\d{1,2}):?\d{1,2} (?:on )?#{daily}/ do
       "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
     end
 
@@ -110,7 +110,7 @@ class ChronicCron
     weekday = '((?:mon|tue|wed|thu|fri|sat|sun)\w*)'
     
     # e.g. at 10:30pm on every Monday
-    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
+    get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, mins, meridiem, wday|                                              
       hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s" % [mins, hrs , wday]
