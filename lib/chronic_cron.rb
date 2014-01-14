@@ -168,10 +168,10 @@ class ChronicCron
 
 
       h = {
-            /first|1st/       => 0, 
-            /second|2nd/      => 1, 
-            /third|3rd/       => 2, 
-            /fourth|4th|last/ => 3
+            /first|1st/i       => 0, 
+            /second|2nd/i      => 1, 
+            /third|3rd/i       => 2, 
+            /fourth|4th|last/i => 3
       }
 
       _, nweek = h.find{|k,_| nth_week[k]}
@@ -240,10 +240,10 @@ class ChronicCron
       month = @now.month
 
       h = {
-            /first|1st/       => '1-7', 
-            /second|2nd/      => '8-14', 
-            /third|3rd/       => '15-21', 
-            /fourth|4th|last/ => '22-28'
+            /first|1st/i       => '1-7', 
+            /second|2nd/i      => '8-14', 
+            /third|3rd/i       => '15-21', 
+            /fourth|4th|last/i => '22-28'
       }
 
       _, day_range = h.find{|k,_| nth_week[k]}

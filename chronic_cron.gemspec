@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'chronic_cron'
-  s.version = '0.2.29'
+  s.version = '0.2.30'
   s.summary = 'chronic_cron'
   s.authors = ['James Robertson']
   s.files = Dir['lib/**/*.rb'] 
