@@ -8,8 +8,6 @@ require 'cron_format'
 require 'timetoday'
 
 
-WEEK = DAY * 7
-
 class ChronicCron
   include AppRoutes
   
@@ -24,8 +22,7 @@ class ChronicCron
     expressions(@params)
 
     expression = find_expression(s.sub(/^(?:on|at|from|starting)\s+/,''))
-
-    @cf = CronFormat.new(expression, now)    
+    @cf = CronFormat.new(expression, now)
     @to_expression = @cf.to_expression
 
   end
@@ -238,33 +235,25 @@ class ChronicCron
     # e.g. first thursday of each month at 7:30pm
     nday = '(\w+(?:st|rd|nd))\s+' + weekday + '\s+'
     get /#{nday}(?:of\s+)?(?:the|each|every)\s+month(?:\s+at\s+([^\s]+))?/i do
-                                                  |nth_week, day_of_week, time|
+                                              |nth_week, day_of_week, raw_time|
 
       month = @now.month
 
       h = {
-            /first|1st/       => 0, 
-            /second|2nd/      => 1, 
-            /third|3rd/       => 2, 
-            /fourth|4th|last/ => 3
+            /first|1st/       => '1-7', 
+            /second|2nd/      => '8-14', 
+            /third|3rd/       => '15-21', 
+            /fourth|4th|last/ => '22-28'
       }
 
-      _, nweek = h.find{|k,_| nth_week[k]}
+      _, day_range = h.find{|k,_| nth_week[k]}
+      a = %w(sunday monday tuesday wednesday thursday friday saturday)
+      wday = a.index(a.grep(/#{day_of_week}/).first)
 
-      def make_date(day_of_week, month, time, nweek)
+      raw_time ||= '6:00am'
+      minute, hour = Chronic.parse(raw_time).to_a[1,2]
 
-        Chronic.parse([day_of_week,month,time].join(' '), :now => @now) \
-          + WEEK * nweek
-      end
-      
-      months = Date::MONTHNAMES
-      t = make_date day_of_week, months[month], time, nweek
-
-      if t < @now
-        t = make_date(day_of_week, months.rotate[month], time, nweek)
-      end
-
-      "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+      "%s %s %s * %s" % [minute, hour, day_range, wday]
     end 
 
     # e.g. 04-Aug@12:34
