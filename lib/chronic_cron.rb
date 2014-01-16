@@ -184,7 +184,7 @@ class ChronicCron
     
 
     # e.g. every 2nd week at 6am starting from 7th Jan
-    get /every (\w+) week\s+(?:at\s+(\w+)\s+starting\s+)?(?:from\s+)?(.*)/ do
+    get /every (\w+) week\s+(?:at\s+([^\s]+)\s+starting\s+)?(?:from\s+)?(.*)/ do
                                                |nth_week, raw_time, raw_date|
 
 #   |nth_week, day_of_week, time|
@@ -221,7 +221,7 @@ class ChronicCron
     end        
 
     # e.g.  every 2 weeks at 6am starting from 7th Jan
-     get /every (\w+) weeks\s+(?:at\s+(\w+)\s+starting\s+)?(?:from\s+)?(.*)/ do
+     get /every (\w+) weeks\s+(?:at\s+([^\s]+)\s+starting\s+)?(?:from\s+)?(.*)/ do
                                                |interval, raw_time, raw_date|
 
       t = Chronic.parse(raw_date + ' ' + raw_time, :now => @now)
