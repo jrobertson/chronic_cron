@@ -131,6 +131,17 @@ class ChronicCron
     # e.g. every 2 days
     get(/every (\d{1,2}) days?/){|days| "* * */%s * *" % [days]}    
     get(/#{daily}/){ "0 0 * * *"}
+
+    get /(?:any\s?time)?(?: today)? between (\S+) and (\S+)/ do |s1, s2|
+      self.instance_eval %Q(
+      def next()
+        t = TimeToday.between('#{s1}','#{s2}') + DAY
+        @cf = CronFormat.new("%s %s %s %s *" % t.to_a[1..4])
+        t
+      end
+      )
+      "%s %s %s %s *" % TimeToday.between(s1,s2).to_a[1..4]
+    end
     
     get /any\s?time today/ do
       self.instance_eval %q(
