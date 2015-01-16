@@ -22,7 +22,7 @@ class ChronicCron
     expressions(@params)
 
     expression = find_expression(s.sub(/^(?:on|at|from|starting)\s+/,''))
-    @cf = CronFormat.new(expression, now)    
+    @cf = CronFormat.new(expression, now)
     @to_expression = @cf.to_expression
 
   end
@@ -53,16 +53,16 @@ class ChronicCron
     end    
 
     # e.g. every 30mins from 8:00am until 8:00pm mon-fri
-    get /every\s+(\d+)mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+(\w+\-\w+)/ do 
+    get /every\s+(\d+)\s*mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+(\w+\-\w+)/ do 
          |interval_mins, r_hrs1, mins1, meridiem1, r_hrs2, meridiem2, wdays|
-         puts 'cute'
+
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
       "%s/%s %s-%s * * %s" % [mins1.to_i, interval_mins, hrs1, hrs2, wdays]
     end        
     
     # e.g. every 30mins from 8:00am until 8:00pm every day
-    get /every\s+(\d+)mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+#{daily}/ do 
+    get /every\s+(\d+)\s*mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+#{daily}/ do 
                   |interval_mins, r_hrs1, mins1, meridiem1, r_hrs2, meridiem2|
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
@@ -78,21 +78,20 @@ class ChronicCron
     end    
 
     # e.g. 10:15am every day
-    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
-      puts 'book'
+    get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * *" % [mins.to_i, hrs]
     end
 
     # e.g. at 7:30am  Monday to Friday
-    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
+    get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
                                   |raw_hrs, mins, meridiem, wday1, wday2|
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s-%s" % [mins.to_i, hrs , wday1, wday2]
     end      
     
     # e.g. at 11:00 and 16:00 on every day
-    get /(\d{1,2}):(\d{1,2}) and (\d{1,2}):\d{1,2} (?:on )?#{daily}/ do
+    get /(\d{1,2}):?(\d{1,2}) and (\d{1,2}):?\d{1,2} (?:on )?#{daily}/ do
       "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
     end
 
@@ -108,17 +107,16 @@ class ChronicCron
     weekday = '((?:mon|tue|wed|thu|fri|sat|sun)\w*)'
     
     # e.g. at 10:30pm on every Monday
-    get /(\d{1,2}):(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
+    get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, mins, meridiem, wday|                                              
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
-      puts 'hmmm'
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s" % [mins, hrs , wday]
     end
     
     # e.g. at 10pm on every Monday
     get /(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, meridiem, wday|
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "0 %s * * %s" % [hrs , wday]
     end    
     
@@ -133,6 +131,17 @@ class ChronicCron
     # e.g. every 2 days
     get(/every (\d{1,2}) days?/){|days| "* * */%s * *" % [days]}    
     get(/#{daily}/){ "0 0 * * *"}
+
+    get /(?:any\s?time)?(?: today)? between (\S+) and (\S+)/ do |s1, s2|
+      self.instance_eval %Q(
+      def next()
+        t = TimeToday.between('#{s1}','#{s2}') + DAY
+        @cf = CronFormat.new("%s %s %s %s *" % t.to_a[1..4])
+        t
+      end
+      )
+      "%s %s %s %s *" % TimeToday.between(s1,s2).to_a[1..4]
+    end
     
     get /any\s?time today/ do
       self.instance_eval %q(
@@ -148,30 +157,104 @@ class ChronicCron
     # e.g. every tuesday at 4pm
     get /every\s+#{weekday}\s+at\s+(\d{1,2})([ap]m)/i do
                                               |wday, raw_hrs, meridiem, |
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
+      hrs = in24hrs(raw_hrs, meridiem)
       "0 %s * * %s" % [hrs , wday]
     end
+
+    # e.g. first thursday of each month at 7:30pm
+    nday = '(\w+(?:st|rd|nd))\s+' + weekday + '\s+'
+    get /#{nday}(?:of\s+)?(?:the|each|every)\s+month(?:\s+at\s+([^\s]+))?/i do
+                                              |nth_week, day_of_week, raw_time|
+
+      month = @now.month
+
+      h = {
+            /first|1st/i       => '1-7', 
+            /second|2nd/i      => '8-14', 
+            /third|3rd/i       => '15-21', 
+            /fourth|4th|last/i => '22-28'
+      }
+
+      _, day_range = h.find{|k,_| nth_week[k]}
+      a = %w(sunday monday tuesday wednesday thursday friday saturday)
+      wday = a.index(a.grep(/#{day_of_week}/i).first)
+
+      raw_time ||= '6:00am'
+      minute, hour = Chronic.parse(raw_time).to_a[1,2]
+      "%s %s %s * %s" % [minute, hour, day_range, wday]
+
+    end 
 
     # e.g. every tuesday at 4:40pm
     get /every\s+#{weekday}\s+at\s+(\d{1,2}):(\d{1,2})([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
-      hrs = meridiem == 'pm' ? raw_hrs.to_i + 12 : raw_hrs
-      puts 'coo'
+      hrs = in24hrs(raw_hrs, meridiem)
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
+    
+
+    # e.g. every 2nd week at 6am starting from 7th Jan
+    get /every (\w+) week\s+(?:at\s+([^\s]+)\s+starting\s+)?(?:from\s+)?(.*)/ do
+                                               |nth_week, raw_time, raw_date|
+
+#   |nth_week, day_of_week, time|
+
+
+
+      h = {
+            /first|1st/i       => 0, 
+            /second|2nd/i      => 1, 
+            /third|3rd/i       => 2, 
+            /fourth|4th|last/i => 3
+      }
+
+      _, nweek = h.find{|k,_| nth_week[k]}
+
+      month = @now.month
+      date = Time.local(@now.year, month, 1)
+      t = Chronic.parse(raw_date + ' ' + raw_time, :now => date)
+
+      def make_date(day_of_week, month, time, nweek)
+
+        Chronic.parse([day_of_week,month,time].join(' '), :now => @now) \
+          + WEEK * nweek
+      end
+
+      if t < @now
+        day_of_week = Date::DAYNAMES[t.wday]
+        months = Date::MONTHNAMES
+        t = make_date(day_of_week, months.rotate[month], raw_time, nweek)
+      end
+
+      "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+
+    end        
+
+    # e.g.  every 2 weeks at 6am starting from 7th Jan
+     get /every (\w+) weeks\s+(?:at\s+([^\s]+)\s+starting\s+)?(?:from\s+)?(.*)/ do
+                                               |interval, raw_time, raw_date|
+
+      t = Chronic.parse(raw_date + ' ' + raw_time, :now => @now)
+      t += WEEK * interval.to_i until t > @now
+      mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
+
+      "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
+    end    
+
+
     # e.g. starting 05-Aug@15:03 every 2 weeks
     get /(.*) every (\d) weeks/ do |raw_date, interval|
 
-      t = Chronic.parse(raw_date)
+      t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
-    end        
+    end    
     
     # e.g. from 05-Aug@12:34 fortnightly
     get /(.*)\s+(?:biweekly|fortnightly)/ do |raw_date|
 
-      t = Chronic.parse(raw_date)
+      t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s/2 %s" % [mins, hrs, day, month, t.wday, year]
     end            
@@ -179,7 +262,7 @@ class ChronicCron
     # e.g. from 06-Aug@1pm every week
     get /(.*)\s+(?:weekly|every week)/ do |raw_date|
 
-      t = Chronic.parse(raw_date)
+      t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s %s" % [mins, hrs, day, month, t.wday, year]
     end            
@@ -187,8 +270,17 @@ class ChronicCron
     # e.g. 04-Aug@12:34
     get '*' do
       
-      t = Chronic.parse(params[:input])
+      t = Chronic.parse(params[:input], :now => @now)
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+    end
+
+    def in24hrs(raw_hrs, meridiem)
+
+      hrs = if meridiem == 'pm' then
+        raw_hrs.to_i + 12
+      else
+        raw_hrs.to_i == 12 ? 0 : raw_hrs
+      end
     end    
   end
   
