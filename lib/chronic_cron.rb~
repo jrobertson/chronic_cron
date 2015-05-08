@@ -41,7 +41,7 @@ class ChronicCron
 
     r = '[0-9\*,\?\/\-]+'
     daily = '(?:every day|daily)'
-    
+
     # e.g. 00 5 15 * *
     get /(#{r}\s+#{r}\s+#{r}\s#{r}\s#{r})(\s#{r})?/ do
       "%s%s" % params[:captures]
@@ -103,7 +103,7 @@ class ChronicCron
     get('monthly')  {'0 0 1 * *'}
     get('yearly')   {'0 0 1 1 *'}
     get('annually') {'0 0 1 1 *'}
-    
+
     weekday = '((?:mon|tue|wed|thu|fri|sat|sun)\w*)'
     
     # e.g. at 10:30pm on every Monday
@@ -180,11 +180,20 @@ class ChronicCron
       wday = a.index(a.grep(/#{day_of_week}/i).first)
 
       raw_time ||= '6:00am'
+
       minute, hour = Chronic.parse(raw_time).to_a[1,2]
       "%s %s %s * %s" % [minute, hour, day_range, wday]
 
     end 
+    
 
+    # e.g. every 2nd tuesday at 4:40pm
+    get /every\s+2nd\s+#{weekday}\s+at\s+(\d{1,2})(?::(\d{1,2}))?([ap]m)/i do
+                                            |wday, raw_hrs, mins, meridiem, |
+      hrs = in24hrs(raw_hrs, meridiem)
+      "%s %s * * %s/2" % [mins.to_i, hrs , wday]
+    end       
+    
     # e.g. every tuesday at 4:40pm
     get /every\s+#{weekday}\s+at\s+(\d{1,2}):(\d{1,2})([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
@@ -192,54 +201,24 @@ class ChronicCron
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
-    
 
     # e.g. every 2nd week at 6am starting from 7th Jan
-    get /every (\w+) week\s+(?:at\s+([^\s]+)\s+starting\s+)?(?:from\s+)?(.*)/ do
-                                               |nth_week, raw_time, raw_date|
+    get /every 2nd week\s+at\s+([^\s]+)/ do |raw_time|
 
-#   |nth_week, day_of_week, time|
+      t = Chronic.parse(raw_time, :now => @now)
 
-
-
-      h = {
-            /first|1st/i       => 0, 
-            /second|2nd/i      => 1, 
-            /third|3rd/i       => 2, 
-            /fourth|4th|last/i => 3
-      }
-
-      _, nweek = h.find{|k,_| nth_week[k]}
-
-      month = @now.month
-      date = Time.local(@now.year, month, 1)
-      t = Chronic.parse(raw_date + ' ' + raw_time, :now => date)
-
-      def make_date(day_of_week, month, time, nweek)
-
-        Chronic.parse([day_of_week,month,time].join(' '), :now => @now) \
-          + WEEK * nweek
-      end
-
-      if t < @now
-        day_of_week = Date::DAYNAMES[t.wday]
-        months = Date::MONTHNAMES
-        t = make_date(day_of_week, months.rotate[month], raw_time, nweek)
-      end
-
-      "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+      "%s %s * * %s/2" % [t.min,t.hour,t.wday]
 
     end        
 
     # e.g.  every 2 weeks at 6am starting from 7th Jan
-     get /every (\w+) weeks\s+(?:at\s+([^\s]+)\s+starting\s+)?(?:from\s+)?(.*)/ do
-                                               |interval, raw_time, raw_date|
+     get /every (\w+) weeks\s+(?:at\s+([^\s]+))?/ do |interval, raw_time|
 
-      t = Chronic.parse(raw_date + ' ' + raw_time, :now => @now)
+      t = Chronic.parse(raw_time, :now => @now)
       t += WEEK * interval.to_i until t > @now
-      mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
+      mins, hrs = t.to_a.values_at(1,2)
 
-      "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
+      "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
     end    
 
 
@@ -247,8 +226,8 @@ class ChronicCron
     get /(.*) every (\d) weeks/ do |raw_date, interval|
 
       t = Chronic.parse(raw_date, :now => @now)
-      mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
-      "%s %s %s %s %s/%s %s" % [mins, hrs, day, month, t.wday, interval, year]
+      mins, hrs = t.to_a.values_at(1,2)
+      "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
     end    
     
     # e.g. from 05-Aug@12:34 fortnightly
@@ -269,7 +248,7 @@ class ChronicCron
     
     # e.g. 04-Aug@12:34
     get '*' do
-      
+
       t = Chronic.parse(params[:input], :now => @now)
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
     end

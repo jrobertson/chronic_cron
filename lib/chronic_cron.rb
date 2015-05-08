@@ -22,6 +22,7 @@ class ChronicCron
     expressions(@params)
 
     expression = find_expression(s.sub(/^(?:on|at|from|starting)\s+/,''))
+    #puts 'expression : ' + expression.inspect
     @cf = CronFormat.new(expression, now)
     @to_expression = @cf.to_expression
 
@@ -245,6 +246,11 @@ class ChronicCron
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
       "%s %s %s %s %s %s" % [mins, hrs, day, month, t.wday, year]
     end            
+        
+    # e.g. every sunday
+    get /every\s+#{weekday}/ do |wday|
+      "0 12 * * %s" % wday
+    end    
     
     # e.g. 04-Aug@12:34
     get '*' do
