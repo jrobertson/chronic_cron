@@ -21,7 +21,8 @@ class ChronicCron
     @params = {input: s}
     expressions(@params)
 
-    expression = find_expression(s.sub(/^(?:on|at|from|starting)\s+/,''))
+    expression = find_expression(s.downcase\
+                                 .sub(/^(?:on|at|from|starting)\s+/,''))
     #puts 'expression : ' + expression.inspect
     @cf = CronFormat.new(expression, now)
     @to_expression = @cf.to_expression
@@ -211,6 +212,14 @@ class ChronicCron
       "%s %s * * %s/2" % [t.min,t.hour,t.wday]
 
     end        
+    
+    
+    # e.g. every 2nd monday
+    get /every 2nd #{weekday}/ do |wday|
+
+      "* * * * %s/2" % [wday]
+
+    end       
 
     # e.g.  every 2 weeks at 6am starting from 7th Jan
      get /every (\w+) weeks\s+(?:at\s+([^\s]+))?/ do |interval, raw_time|
