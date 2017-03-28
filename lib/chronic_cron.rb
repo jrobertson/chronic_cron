@@ -34,8 +34,17 @@ class ChronicCron
         [self.object_id, @to_expression, @cf.to_time]
   end
   
-  def next()    @cf.next    end
-  def to_time() @cf.to_time end
+  def next()
+    @cf.next
+  end
+    
+  def to_date() 
+    @cf.to_time.to_date
+  end
+  
+  def to_time()
+    @cf.to_time
+  end
     
   protected
 
