@@ -186,8 +186,24 @@ class ChronicCron
       minute, hour = Chronic.parse(raw_time).to_a[1,2]
       "%s %s %s * %s" % [minute, hour, day_range, wday]
 
-    end 
+    end
     
+    # e.g. last sunday of March at 1am
+    
+    get /last (#{Date::DAYNAMES.join('|')}) (?:of|in) \
+(#{Date::MONTHNAMES[1..-1].join('|')})\s+at\s+(\d{1,2})(?::(\d{1,2}))?\
+([ap]m)/i do |day, month,  raw_hrs, mins, meridiem|
+
+      now = Chronic.parse(month, now: @now)
+
+      t = Chronic.parse(month, now: 
+                        Time.local(now > @now ? now.year : now.year.next))
+      t2 = Chronic.parse('last ' + day, now: 
+                         Time.local(t.year, t.month.next)).to_date
+      hrs = in24hrs(raw_hrs, meridiem)
+      
+      "%s %s %s %s *" % [mins.to_i, hrs, t2.day, t.month]
+    end
 
     # e.g. every 2nd tuesday at 4:40pm
     get /every\s+2nd\s+#{weekday}\s+at\s+(\d{1,2})(?::(\d{1,2}))?([ap]m)/i do
