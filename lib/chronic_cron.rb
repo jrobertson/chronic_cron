@@ -166,10 +166,11 @@ class ChronicCron
     end
     
     # e.g. every tuesday at 4pm
-    get /every\s+#{weekday}\s+at\s+(\d{1,2})([ap]m)/i do
+    get /every\s+#{weekday}\s+(?:at\s+)?(\d{1,2})([ap]m)/i do
                                               |wday, raw_hrs, meridiem, |
-      hrs = in24hrs(raw_hrs, meridiem)
-      "0 %s * * %s" % [hrs , wday]
+      hrs = in24hrs(raw_hrs, meridiem)      
+      
+      "0 %s * * %s" % [hrs , Date::DAYNAMES.index(wday.capitalize)]
     end
 
     # e.g. first thursday of each month at 7:30pm
