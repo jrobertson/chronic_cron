@@ -165,14 +165,6 @@ class ChronicCron
       "%s %s %s %s *" % TimeToday.future.to_a[1..4]
     end
     
-    # e.g. every tuesday at 4pm
-    get /every\s+#{weekday}\s+(?:at\s+)?(\d{1,2})([ap]m)/i do
-                                              |wday, raw_hrs, meridiem, |
-      hrs = in24hrs(raw_hrs, meridiem)      
-      
-      "0 %s * * %s" % [hrs , Date::DAYNAMES.index(wday.capitalize)]
-    end
-
     # e.g. first thursday of each month at 7:30pm
     nday = '(\w+(?:st|rd|nd))\s+' + weekday + '\s+'
     get /#{nday}(?:of\s+)?(?:the|each|every)\s+month(?:\s+at\s+([^\s]+))?/i do
@@ -197,6 +189,16 @@ class ChronicCron
       "%s %s %s * %s" % [minute, hour, day_range, wday]
 
     end
+    
+    # e.g. every tuesday at 4pm
+    get /every\s+#{weekday}\s+(?:at\s+)?(\d{1,2})([ap]m)/i do
+                                              |wday, raw_hrs, meridiem, |
+
+      hrs = in24hrs(raw_hrs, meridiem)      
+      
+      "0 %s * * %s" % [hrs , Date::DAYNAMES.index(wday.capitalize)]
+    end
+    
     
     # e.g. last sunday of March at 1am
     
