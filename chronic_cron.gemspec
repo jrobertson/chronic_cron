@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'chronic_cron'
-  s.version = '0.3.6'
+  s.version = '0.3.7'
   s.summary = 'Converts a human-readable time (e.g. 10:15 daily) 
 into a cron format (e,g, 15 10 * * *)'
   s.authors = ['James Robertson']

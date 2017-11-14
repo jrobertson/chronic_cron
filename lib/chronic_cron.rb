@@ -13,9 +13,9 @@ class ChronicCron
   
   attr_reader :to_expression  
   
-  def initialize(s, now=Time.now)
+  def initialize(s, now=Time.now, log: nil)
     
-    @now = now
+    @now, @log = now, log
     
     super()
     @params = {input: s}
@@ -49,6 +49,8 @@ class ChronicCron
   protected
 
   def expressions(params) 
+    
+    log = @log
 
     r = '[0-9\*,\?\/\-]+'
     daily = '(?:every day|daily)'
@@ -64,7 +66,7 @@ class ChronicCron
     end    
 
     # e.g. every 30mins from 8:00am until 8:00pm mon-fri
-    get /every\s+(\d+)\s*mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+(\w+\-\w+)/ do 
+    get /every\s+(\d+)\s*mins\s+from\s+(\d{1,2}):(\d{1,2})([ap]m)(?:\s+until\s+|\s*-\s*)(\d{1,2}):\d{1,2}([ap]m)\s+(\w+\-\w+)/x do 
          |interval_mins, r_hrs1, mins1, meridiem1, r_hrs2, meridiem2, wdays|
 
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
@@ -140,7 +142,12 @@ class ChronicCron
     get(/every hour/){ "0 * * * *"}
     
     # e.g. every 2 days
-    get(/every (\d{1,2}) days?/){|days| "* * */%s * *" % [days]}    
+    get(/every (\d{1,2}) days?/) do |days|
+      
+      log.info 'ChronicCron/expressions/get: r130' if log
+      "* * */%s * *" % [days]
+    end
+    
     get(/#{daily}/){ "0 0 * * *"}
 
     get /(?:any\s?time)?(?: today)? between (\S+) and (\S+)/ do |s1, s2|
@@ -221,6 +228,7 @@ class ChronicCron
     get /every\s+2nd\s+#{weekday}\s+at\s+(\d{1,2})(?::(\d{1,2}))?([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
       hrs = in24hrs(raw_hrs, meridiem)
+      log.info 'ChronicCron/expressions/get: r230' if log
       "%s %s * * %s/2" % [mins.to_i, hrs , wday]
     end       
     
@@ -236,7 +244,8 @@ class ChronicCron
     get /every 2nd week\s+at\s+([^\s]+)/ do |raw_time|
 
       t = Chronic.parse(raw_time, :now => @now)
-
+      log.info 'ChronicCron/expressions/get: r250' if log
+      
       "%s %s * * %s/2" % [t.min,t.hour,t.wday]
 
     end        
@@ -250,11 +259,13 @@ class ChronicCron
     end       
 
     # e.g.  every 2 weeks at 6am starting from 7th Jan
-     get /every (\w+) weeks\s+(?:at\s+([^\s]+))?/ do |interval, raw_time|
+     get /^every (\w+) weeks(?:\s+at\s+([^\s]+))?/ do |interval, raw_time|
 
-      t = Chronic.parse(raw_time, :now => @now)
+      t = raw_time ? Chronic.parse(raw_time, :now => @now) : @now
       t += WEEK * interval.to_i until t > @now
       mins, hrs = t.to_a.values_at(1,2)
+      
+      log.info 'ChronicCron/expressions/get: r270' if log      
 
       "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
     end    
