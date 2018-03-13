@@ -21,10 +21,23 @@ class ChronicCron
     @params = {input: s}
     expressions(@params)
 
-    expression = find_expression(s.downcase\
+    if s =~ /^tomorrow/i then
+      
+      s.sub!(/^tomorrow /i,'')
+      expression = find_expression(s.downcase\
+                                 .sub(/^(?:is|on|at|from|starting)\s+/,''))
+      @cf = CronFormat.new(expression, now)      
+      @cf.adjust_date @cf.to_time - (24 * 60 * 60)
+      
+    else
+      
+      expression = find_expression(s.downcase\
                                  .sub(/^(?:on|at|from|starting)\s+/,''))
-    #puts 'expression : ' + expression.inspect
-    @cf = CronFormat.new(expression, now)
+      @cf = CronFormat.new(expression, now)      
+      
+    end
+    
+
     @to_expression = @cf.to_expression
 
   end
