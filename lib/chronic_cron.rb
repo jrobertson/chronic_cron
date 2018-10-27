@@ -13,9 +13,9 @@ class ChronicCron
   
   attr_reader :to_expression  
   
-  def initialize(s, now=Time.now, log: nil)
+  def initialize(s, now=Time.now, log: nil, debug: false)
     
-    @now, @log = now, log
+    @now, @log, @debug = now, log, debug
     
     super()
     @params = {input: s}
@@ -70,11 +70,17 @@ class ChronicCron
 
     # e.g. 00 5 15 * *
     get /(#{r}\s+#{r}\s+#{r}\s#{r}\s#{r})(\s#{r})?/ do
+      
+      puts 'ChronicCron#expressions 10' if @debug
+      
       "%s%s" % params[:captures]
     end
 
     # e.g. 9:00-18:00 every day
     get /(\d{1,2}):(\d{1,2})-(\d{1,2}):\d{1,2}\s+#{daily}/ do
+      
+      puts 'ChronicCron#expressions 20' if @debug
+      
       "%s %s-%s * * *" % params[:captures].values_at(1,0,2)
     end    
 
@@ -84,6 +90,9 @@ class ChronicCron
 
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
+      
+      puts 'ChronicCron#expressions 30' if @debug
+      
       "%s/%s %s-%s * * %s" % [mins1.to_i, interval_mins, hrs1, hrs2, wdays]
     end        
     
@@ -92,6 +101,9 @@ class ChronicCron
                   |interval_mins, r_hrs1, mins1, meridiem1, r_hrs2, meridiem2|
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
+      
+      puts 'ChronicCron#expressions 40' if @debug
+      
       "%s/%s %s-%s * * *" % [mins1.to_i, interval_mins, hrs1, hrs2]
     end        
     
@@ -100,12 +112,18 @@ class ChronicCron
                                   |r_hrs1, mins1, meridiem1, r_hrs2, meridiem2|
       hrs1 = meridiem1 == 'pm' ? r_hrs1.to_i + 12 : r_hrs1
       hrs2 = meridiem2 == 'pm' ? r_hrs2.to_i + 12 : r_hrs2
+      
+      puts 'ChronicCron#expressions 50' if @debug
+      
       "%s %s-%s * * *" % [mins1.to_i, hrs1, hrs2]
     end    
 
     # e.g. 10:15am every day
     get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+#{daily}/ do |raw_hrs, mins, meridiem|
       hrs = in24hrs(raw_hrs, meridiem)
+      
+      puts 'ChronicCron#expressions 60' if @debug
+      
       "%s %s * * *" % [mins.to_i, hrs]
     end
 
@@ -113,11 +131,17 @@ class ChronicCron
     get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+(\w+) to (\w+)/ do 
                                   |raw_hrs, mins, meridiem, wday1, wday2|
       hrs = in24hrs(raw_hrs, meridiem)
+      
+      puts 'ChronicCron#expressions 70' if @debug
+      
       "%s %s * * %s-%s" % [mins.to_i, hrs , wday1, wday2]
     end      
     
     # e.g. at 11:00 and 16:00 on every day
     get /(\d{1,2}):?(\d{1,2}) and (\d{1,2}):?\d{1,2} (?:on )?#{daily}/ do
+      
+      puts 'ChronicCron#expressions 80' if @debug
+      
       "%s %s,%s * * *" % params[:captures].values_at(1,0,2)
     end
 
@@ -136,6 +160,9 @@ class ChronicCron
     get /(\d{1,2}):?(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, mins, meridiem, wday|                                              
       hrs = in24hrs(raw_hrs, meridiem)
+      
+      puts 'ChronicCron#expressions 90' if @debug
+      
       "%s %s * * %s" % [mins, hrs , wday]
     end
     
@@ -143,6 +170,9 @@ class ChronicCron
     get /(\d{1,2})([ap]m)?\s+(?:on )?every #{weekday}/i do 
                                               |raw_hrs, meridiem, wday|
       hrs = in24hrs(raw_hrs, meridiem)
+      
+      puts 'ChronicCron#expressions 100' if @debug
+      
       "0 %s * * %s" % [hrs , wday]
     end    
     
@@ -158,6 +188,8 @@ class ChronicCron
     get(/every (\d{1,2}) days?/) do |days|
       
       log.info 'ChronicCron/expressions/get: r130' if log
+      puts 'ChronicCron#expressions 150' if @debug
+      
       "* * */%s * *" % [days]
     end
     
@@ -171,6 +203,9 @@ class ChronicCron
         t
       end
       )
+      
+      puts 'ChronicCron#expressions 170' if @debug
+      
       "%s %s %s %s *" % TimeToday.between(s1,s2).to_a[1..4]
     end
     
@@ -182,6 +217,8 @@ class ChronicCron
         t
       end
       )
+      puts 'ChronicCron#expressions 180' if @debug
+      
       "%s %s %s %s *" % TimeToday.future.to_a[1..4]
     end
     
@@ -206,6 +243,9 @@ class ChronicCron
       raw_time ||= '6:00am'
 
       minute, hour = Chronic.parse(raw_time).to_a[1,2]
+      
+      puts 'ChronicCron#expressions 190' if @debug
+      
       "%s %s %s * %s" % [minute, hour, day_range, wday]
 
     end
@@ -215,6 +255,8 @@ class ChronicCron
                                               |wday, raw_hrs, meridiem, |
 
       hrs = in24hrs(raw_hrs, meridiem)      
+      
+      puts 'ChronicCron#expressions 200' if @debug
       
       "0 %s * * %s" % [hrs , Date::DAYNAMES.index(wday.capitalize)]
     end
@@ -227,21 +269,39 @@ class ChronicCron
 ([ap]m)/i do |day, month,  raw_hrs, mins, meridiem|
 
       now = Chronic.parse(month, now: @now)
+      
+      d = last_wdayofmonth(day, now)
 
-      t = Chronic.parse(month, now: 
-                        Time.local(now > @now ? now.year : now.year.next))
-      t2 = Chronic.parse('last ' + day, now: 
-                         Time.local(t.year, t.month.next)).to_date
       hrs = in24hrs(raw_hrs, meridiem)
       
-      "%s %s %s %s *" % [mins.to_i, hrs, t2.day, t.month]
+      puts 'ChronicCron#expressions 210' if @debug
+      
+      "%s %s %s %s *" % [mins.to_i, hrs, d.day, d.month]
     end
+    
+    # e.g. last sunday of October
+    
+    get /last (#{Date::DAYNAMES.join('|')}) (?:of|in) \
+(#{Date::MONTHNAMES[1..-1].join('|')})/i do |day, month|
+
+      now = Chronic.parse(month, now: @now)
+
+      d = last_wdayofmonth(day, now)
+      
+      puts 'ChronicCron#expressions 220' if @debug
+      
+      "* * %s %s *" % [d.day, d.month]
+    end
+    
 
     # e.g. every 2nd tuesday at 4:40pm
     get /every\s+2nd\s+#{weekday}\s+at\s+(\d{1,2})(?::(\d{1,2}))?([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
       hrs = in24hrs(raw_hrs, meridiem)
       log.info 'ChronicCron/expressions/get: r230' if log
+      
+      puts 'ChronicCron#expressions 220' if @debug
+      
       "%s %s * * %s/2" % [mins.to_i, hrs , wday]
     end       
     
@@ -249,6 +309,9 @@ class ChronicCron
     get /every\s+#{weekday}\s+at\s+(\d{1,2}):(\d{1,2})([ap]m)/i do
                                             |wday, raw_hrs, mins, meridiem, |
       hrs = in24hrs(raw_hrs, meridiem)
+      
+      puts 'ChronicCron#expressions 230' if @debug
+      
       "%s %s * * %s" % [mins, hrs , wday]
     end    
     
@@ -258,6 +321,7 @@ class ChronicCron
 
       t = Chronic.parse(raw_time, :now => @now)
       log.info 'ChronicCron/expressions/get: r250' if log
+      puts 'ChronicCron#expressions 240' if @debug
       
       "%s %s * * %s/2" % [t.min,t.hour,t.wday]
 
@@ -267,6 +331,7 @@ class ChronicCron
     # e.g. every 2nd monday
     get /every 2nd #{weekday}/ do |wday|
 
+      puts 'ChronicCron#expressions 250' if @debug
       "* * * * %s/2" % [wday]
 
     end       
@@ -279,6 +344,7 @@ class ChronicCron
       mins, hrs = t.to_a.values_at(1,2)
       
       log.info 'ChronicCron/expressions/get: r270' if log      
+      puts 'ChronicCron#expressions 270' if @debug
 
       "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
     end    
@@ -289,6 +355,8 @@ class ChronicCron
 
       t = Chronic.parse(raw_date, :now => @now)
       mins, hrs = t.to_a.values_at(1,2)
+      puts 'ChronicCron#expressions 280' if @debug
+      
       "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
     end    
     
@@ -297,6 +365,8 @@ class ChronicCron
 
       t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
+      puts 'ChronicCron#expressions 290' if @debug
+      
       "%s %s %s %s %s/2 %s" % [mins, hrs, day, month, t.wday, year]
     end            
 
@@ -305,11 +375,16 @@ class ChronicCron
 
       t = Chronic.parse(raw_date, :now => @now)
       mins, hrs, day, month, year = t.to_a.values_at(1,2,3,4,5)
+      puts 'ChronicCron#expressions 300' if @debug
+      
       "%s %s %s %s %s %s" % [mins, hrs, day, month, t.wday, year]
     end            
         
     # e.g. every sunday
     get /every\s+#{weekday}/ do |wday|
+      
+      puts 'ChronicCron#expressions 310' if @debug
+      
       "0 12 * * %s" % wday
     end    
     
@@ -317,6 +392,8 @@ class ChronicCron
     get '*' do
 
       t = Chronic.parse(params[:input], :now => @now)
+      puts 'ChronicCron#expressions 330' if @debug
+      
       "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
     end
 
@@ -330,6 +407,21 @@ class ChronicCron
     end    
   end
   
+  
   alias find_expression run_route
+  
+  private
+  
+  def last_wdayofmonth(day, now)
+    
+    wday = Date::DAYNAMES.map(&:downcase).index(day)
+
+    d2 = Date.today
+    date = Date.civil(now.year, now.month, -1)
+    date -= 1 until date.wday == wday       
+      
+    return date
+    
+  end
   
 end
