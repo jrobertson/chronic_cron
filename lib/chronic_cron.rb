@@ -10,12 +10,15 @@ require 'timetoday'
 
 class ChronicCron
   include AppRoutes
+  using ColouredText
   
   attr_reader :to_expression  
   
   def initialize(s, now=Time.now, log: nil, debug: false)
     
     @now, @log, @debug = now, log, debug
+    
+    puts ('@now: ' + @now.inspect).debug if @debug    
     
     super()
     @params = {input: s}
@@ -269,8 +272,10 @@ class ChronicCron
 ([ap]m)/i do |day, month,  raw_hrs, mins, meridiem|
 
       now = Chronic.parse(month, now: @now)
+      puts ('now: ' + now.inspect).debug if @debug
       
       d = last_wdayofmonth(day, now)
+      puts ('d: ' + d.inspect).debug if @debug
 
       hrs = in24hrs(raw_hrs, meridiem)
       
@@ -335,16 +340,46 @@ class ChronicCron
       "* * * * %s/2" % [wday]
 
     end       
+    
+
+    # e.g.  every 2 weeks (starting 7th Jan 2020)
+    get /^every (\w+) weeks \(starting ([^\)]+)/ do |interval, raw_date|
+
+      if @debug then
+        puts ('raw_date: ' + raw_date.inspect).debug
+        puts ('now: ' + @now.inspect).debug
+      end
+      
+      t = raw_date ? Chronic.parse(raw_date, :now => @now) : @now
+      t += WEEK * interval.to_i until t > @now
+      mins, hrs = t.to_a.values_at(1,2)
+      
+      log.info 'ChronicCron/expressions/get: r260' if log      
+      if @debug then
+        puts 'ChronicCron#expressions 260'
+        puts ('t: ' + t.inspect).debug
+      end
+
+      "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
+    end    
 
     # e.g.  every 2 weeks at 6am starting from 7th Jan
      get /^every (\w+) weeks(?:\s+at\s+([^\s]+))?/ do |interval, raw_time|
 
+      if @debug then
+        puts ('raw_time: ' + raw_time.inspect).debug
+        puts ('now: ' + @now.inspect).debug
+      end
+      
       t = raw_time ? Chronic.parse(raw_time, :now => @now) : @now
       t += WEEK * interval.to_i until t > @now
       mins, hrs = t.to_a.values_at(1,2)
       
       log.info 'ChronicCron/expressions/get: r270' if log      
-      puts 'ChronicCron#expressions 270' if @debug
+      if @debug then
+        puts 'ChronicCron#expressions 270'
+        puts ('t: ' + t.inspect).debug
+      end
 
       "%s %s * * %s/%s" % [mins, hrs, t.wday, interval]
     end    
