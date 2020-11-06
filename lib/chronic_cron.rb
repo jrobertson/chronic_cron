@@ -14,6 +14,11 @@ class ChronicCron
   
   attr_reader :to_expression  
   
+  def self.parse(s)
+    r = new(s)
+    r.valid? ? r : nil
+  end
+  
   def initialize(s, now=Time.now, log: nil, debug: false)
     
     @now, @log, @debug = now, log, debug
@@ -36,6 +41,9 @@ class ChronicCron
       
       expression = find_expression(s.downcase\
                                  .sub(/^(?:on|at|from|starting)\s+/,''))
+      puts 'expression: ' + expression.inspect if @debug
+      return unless expression
+      
       @cf = CronFormat.new(expression, now)      
       
     end
@@ -45,9 +53,13 @@ class ChronicCron
 
   end
   
-  def inspect() 
-    "#<ChronicCron:%s @to_expression=\"%s\", @to_time=\"%s\">" % 
+  def inspect()
+    if @cf then
+      "#<ChronicCron:%s @to_expression=\"%s\", @to_time=\"%s\">" % 
         [self.object_id, @to_expression, @cf.to_time]
+    else
+      "#<ChronicCron:%s >" % [self.object_id]
+    end
   end
   
   def next()
@@ -60,6 +72,10 @@ class ChronicCron
   
   def to_time()
     @cf.to_time
+  end
+  
+  def valid?
+    !@cf.nil?
   end
     
   protected
@@ -428,8 +444,10 @@ class ChronicCron
 
       t = Chronic.parse(params[:input], :now => @now)
       puts 'ChronicCron#expressions 330' if @debug
-      
-      "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+      puts 't: ' + t.inspect if @debug
+      if t then
+        "%s %s %s %s * %s" % t.to_a.values_at(1,2,3,4,5)
+      end
     end
 
     def in24hrs(raw_hrs, meridiem)
