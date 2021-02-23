@@ -75,7 +75,7 @@ class ChronicCron
   end
   
   def valid?
-    !@cf.nil?
+    @cf.respond_to? :to_time
   end
     
   protected
