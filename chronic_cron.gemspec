@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'chronic_cron'
-  s.version = '0.6.2'
+  s.version = '0.7.0'
   s.summary = 'Converts a human-readable time (e.g. 10:15 daily) into a ' + 
       'cron format (e,g, 15 10 * * *)'
   s.authors = ['James Robertson']
@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.signing_key = '../privatekeys/chronic_cron.pem'
   s.cert_chain  = ['gem-public_cert.pem']
   s.license = 'MIT'
-  s.email = 'james@jamesrobertson.eu'
+  s.email = 'digital.robertson@gmail.com'
   s.homepage = 'https://github.com/jrobertson/chronic_cron'
   s.required_ruby_version = '>= 2.1.2'
 end
