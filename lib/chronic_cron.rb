@@ -8,6 +8,8 @@ require 'cron_format'
 require 'timetoday'
 
 
+MONTHS =  (Date::MONTHNAMES[1..-1] + Date::ABBR_MONTHNAMES[1..-1]).join('|')
+
 class ChronicCron
   include AppRoutes
   using ColouredText
@@ -43,7 +45,7 @@ class ChronicCron
                                  .sub(/^(?:on|at|from|starting)\s+/,''))
       puts 'expression: ' + expression.inspect if @debug
       return unless expression
-
+      puts 'now: ' + now.inspect if @debug
       @cf = CronFormat.new(expression, now)
 
     end
@@ -284,7 +286,7 @@ class ChronicCron
     # e.g. last sunday of March at 1am
 
     get /last (#{Date::DAYNAMES.join('|')}) (?:of|in) \
-(#{Date::MONTHNAMES[1..-1].join('|')})\s+at\s+(\d{1,2})(?::(\d{1,2}))?\
+(#{MONTHS})\s+at\s+(\d{1,2})(?::(\d{1,2}))?\
 ([ap]m)/i do |day, month,  raw_hrs, mins, meridiem|
 
       now = Chronic.parse(month, now: @now)
@@ -303,7 +305,7 @@ class ChronicCron
     # e.g. last sunday of October
 
     get /last (#{Date::DAYNAMES.join('|')}) (?:of|in) \
-(#{Date::MONTHNAMES[1..-1].join('|')})/i do |day, month|
+(#{MONTHS})/i do |day, month|
 
       now = Chronic.parse(month, now: @now)
 
@@ -316,14 +318,27 @@ class ChronicCron
 
 
     # e.g. every 2nd tuesday at 4:40pm
-    get /every\s+2nd\s+#{weekday}\s+at\s+(\d{1,2})(?::(\d{1,2}))?([ap]m)/i do
-                                            |wday, raw_hrs, mins, meridiem, |
-      hrs = in24hrs(raw_hrs, meridiem)
-      log.info 'ChronicCron/expressions/get: r225' if log
+    #
+    get /every\s+2nd\s+#{weekday}\s+at\s+(\d{1,2})(?::(\d{1,2}))?([ap]m)(.*)/i do
+                                    |wday, raw_hrs, mins, meridiem, remaining|
 
+      log.info 'ChronicCron/expressions/get: r225' if log
       puts 'ChronicCron#expressions 225' if @debug
 
-      "%s %s * * %s/2" % [mins.to_i, hrs , wday]
+      hrs = in24hrs(raw_hrs, meridiem)
+      puts 'remaining: ' + remaining.inspect if @debug
+
+      if remaining =~ /#{MONTHS}/i then
+
+        t = Chronic.parse(remaining.gsub(/[\(\)]/,''), :now => @now)
+        "%s %s * * %s/2" % [mins.to_i, hrs, t.wday]
+
+      else
+
+        "%s %s * * %s/2" % [mins.to_i, hrs , wday]
+
+      end
+
     end
 
     # e.g. every tuesday at 4:40pm
@@ -341,7 +356,7 @@ class ChronicCron
     get /every 2nd week\s+at\s+([^\s]+)/ do |raw_time|
 
       t = Chronic.parse(raw_time, :now => @now)
-      log.info 'ChronicCron/expressions/get: r250' if log
+      log.info 'ChronicCron/expressions/get: r240' if log
       puts 'ChronicCron#expressions 240' if @debug
 
       "%s %s * * %s/2" % [t.min,t.hour,t.wday]
